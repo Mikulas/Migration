@@ -13,20 +13,17 @@ $configurator->enableDebugger();
 $configurator->createRobotLoader()->register();
 
 $context = $configurator->createContainer();
-$reset = php_sapi_name() === "cli" ? in_array('reset', $argv) : isset($_GET['reset']);
-if ($reset AND $context->parameters['productionMode'])
+
+$console = new Migration\Console\Application($configurator, $context);
+$console->setDirectory(__DIR__);
+if (php_sapi_name() === "cli")
 {
-	throw new Exception('Reset není povolen na produkčním prostředí.');
+	$console->run();
 }
-
-$runner = new Migration\Runner($context->dibiConnection);
-$runner->addExtension(new OrmPhp($configurator, $context, $context->dibiConnection));
-
-$finder = new Migration\Finders\MultipleDirectories;
-$finder->addDirectory(__DIR__ . '/struct');
-if (isset($_GET['data']))
+else
 {
-	$finder->addDirectory(__DIR__ . '/data');
+	$console->runWithArgs(array(
+        '--reset' => isset($_GET['reset']),
+        '--data' => isset($_GET['data']),
+    ));
 }
-
-$runner->run($finder, $reset);
